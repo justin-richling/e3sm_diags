@@ -129,12 +129,14 @@ def get_psd_from_deseason(xraw, period_new):
     # Calculate the period as a function of frequency
     period0 = 1 / sampling_frequency
     L0 = len(xraw)
-    NFFT0 = 2 ** ceil_log2(L0)
+    #NFFT0 = 2 ** ceil_log2(L0)
+    NFFT0 = L0
 
     # Apply fft on x_deseasoned with n = NFFT
     x0 = scipy.fftpack.fft(x_deseasoned, n=NFFT0) / L0
     # Frequency (cycles/month). Frequency will be increasing.
-    frequency0 = sampling_frequency * np.arange(0, (NFFT0 / 2 + 1)) / NFFT0
+    #frequency0 = sampling_frequency * np.arange(0, (NFFT0 / 2 + 1)) / NFFT0
+    frequency0 = (sampling_frequency/2)*np.linspace(0, 1, int(NFFT0 / 2)+1)
     # Period (months/cycle). Calculate as a function of frequency. Thus, period will be decreasing.
     period0 = 1 / frequency0
 
@@ -151,9 +153,22 @@ def get_psd_from_deseason(xraw, period_new):
     amplitude0_flipped = amplitude0[::-1]
     psd_x0_flipped = psd_x0[::-1]
 
-    amplitude_new0 = np.interp(
+    amplitude_new0_old = np.interp(
         period_new, period0_flipped[:-1], amplitude0_flipped[:-1]
     )
+    print("type(amplitude_new0_old)",type(amplitude_new0_old))
+    print("len(amplitude_new0_old)",len(amplitude_new0_old))
+    print("amplitude_new0_old",amplitude_new0_old,"\n")
+
+    amplitude_new0 = np.zeros(len(period_new))
+    for i in range(len(period0_flipped)):
+        for j in range(len(period_new)):
+            if (period_new[j]>=period0_flipped[i]-1) and (period_new[j]<period0_flipped[i]+1):
+                amplitude_new0[j]=amplitude_new0[j]+amplitude0_flipped[i]
+    print("type(amplitude_new0)",type(amplitude_new0))
+    print("len(amplitude_new0)",len(amplitude_new0))
+    print("amplitude_new0",amplitude_new0,"\n")
+
     psd_x_new0 = np.interp(period_new, period0_flipped[:-1], psd_x0_flipped[:-1])
     return psd_x_new0, amplitude_new0
 
@@ -204,9 +219,10 @@ def run_diag(parameter: QboParameter) -> QboParameter:
         x_test = process_u_for_power_spectral_density(test_region)
         x_ref = process_u_for_power_spectral_density(ref_region)
         # Calculate the PSD and interpolate to period_new. Specify periods to plot
-        period_new = np.concatenate(
-            (np.arange(2.0, 33.0), np.arange(34.0, 100.0, 2.0)), axis=0
-        )
+        #period_new = np.concatenate(
+        #    (np.arange(2.0, 33.0), np.arange(34.0, 100.0, 2.0)), axis=0
+        #)
+        period_new = np.arange(2,51,2)
         test["psd_x_new"], test["amplitude_new"] = get_psd_from_deseason(
             x_test, period_new
         )
